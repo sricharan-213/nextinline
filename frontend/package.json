@@ -1,0 +1,17 @@
+{
+  "name": "nextinline-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "vite": "^4.4.0"
+  }
+}
