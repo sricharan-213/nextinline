@@ -1,11 +1,14 @@
 const router = require('express').Router();
 const pool = require('../db');
+const { ValidationError, NotFoundError } = require('../utils/AppError');
 
 // POST /api/jobs
 router.post('/', async (req, res, next) => {
   try {
     const { company_id, title, active_capacity, acknowledge_window_minutes, decay_penalty } = req.body;
-    if (!company_id || !title || !active_capacity) return res.status(400).json({ error: 'company_id, title, active_capacity required' });
+    if (!company_id || !title || !active_capacity) {
+      throw new ValidationError('company_id, title, and active_capacity are required');
+    }
 
     const result = await pool.query(
       `INSERT INTO jobs (company_id, title, active_capacity, acknowledge_window_minutes, decay_penalty)
@@ -20,7 +23,7 @@ router.post('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const result = await pool.query(`SELECT * FROM jobs WHERE id = $1`, [req.params.id]);
-    if (!result.rows[0]) return res.status(404).json({ error: 'Job not found' });
+    if (!result.rows[0]) throw new NotFoundError('Job not found');
     res.json(result.rows[0]);
   } catch (err) { next(err); }
 });
@@ -31,7 +34,7 @@ router.get('/:id/pipeline', async (req, res, next) => {
     const { id } = req.params;
 
     const job = await pool.query(`SELECT * FROM jobs WHERE id = $1`, [id]);
-    if (!job.rows[0]) return res.status(404).json({ error: 'Job not found' });
+    if (!job.rows[0]) throw new NotFoundError('Job not found');
 
     const active = await pool.query(
       `SELECT * FROM applicants WHERE job_id = $1 AND status = 'active' ORDER BY updated_at ASC`, [id]
@@ -58,7 +61,7 @@ router.get('/:id/pipeline', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/jobs/:id/audit — full audit log
+// GET /api/jobs/:id/audit — paginated audit log
 router.get('/:id/audit', async (req, res, next) => {
   try {
     const { page = 1, limit = 50 } = req.query;
