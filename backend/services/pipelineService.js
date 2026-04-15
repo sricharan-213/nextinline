@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { NotFoundError, ConflictError, GoneError } = require('../utils/AppError');
 
 // Writes every status change to audit_log
 async function logEvent(client, { applicantId, jobId, event, oldStatus, newStatus, oldPosition, newPosition, metadata }) {
@@ -32,7 +33,6 @@ async function promoteNext(client, jobId) {
   );
   const minutes = window.rows[0]?.acknowledge_window_minutes || 60;
   const deadline = new Date(Date.now() + minutes * 60 * 1000);
-
   const oldPosition = next.waitlist_position;
 
   await client.query(
@@ -60,6 +60,26 @@ async function promoteNext(client, jobId) {
   return next;
 }
 
+// Returns full status info for a single applicant — used by the status page
+async function getApplicantStatus(applicantId) {
+  const result = await pool.query(
+    `SELECT id, name, email, status, waitlist_position, acknowledge_deadline, applied_at, updated_at
+     FROM applicants WHERE id = $1`,
+    [applicantId]
+  );
+  if (!result.rows[0]) throw new NotFoundError('Applicant not found');
+  return result.rows[0];
+}
+
+// Returns the full audit trail for a single applicant
+async function getApplicantLog(applicantId) {
+  const result = await pool.query(
+    `SELECT * FROM audit_log WHERE applicant_id = $1 ORDER BY created_at ASC`,
+    [applicantId]
+  );
+  return result.rows;
+}
+
 // Called when a new applicant submits their application
 // Uses pg advisory lock to safely handle concurrent last-slot race
 async function applyForJob(jobId, name, email) {
@@ -82,11 +102,9 @@ async function applyForJob(jobId, name, email) {
 
     if (!lockAcquired.rows[0].pg_try_advisory_xact_lock) {
       // Could not get lock — another concurrent application is being processed
-      // Wait briefly and retry by falling through to capacity check naturally
       await new Promise(r => setTimeout(r, 100));
     }
 
-    // Count current active applicants
     const countResult = await client.query(
       `SELECT COUNT(*) FROM applicants WHERE job_id = $1 AND status = 'active'`,
       [jobId]
@@ -98,16 +116,16 @@ async function applyForJob(jobId, name, email) {
       [jobId]
     );
 
-    if (!jobResult.rows[0]) throw Object.assign(new Error('Job not found or closed'), { status: 404 });
+    if (!jobResult.rows[0]) throw new NotFoundError('Job not found or closed');
 
     const capacity = jobResult.rows[0].active_capacity;
 
-    // Check for duplicate application
+    // DB-level unique constraint handles the race; app-level check gives a friendly message
     const dupCheck = await client.query(
       `SELECT id FROM applicants WHERE job_id = $1 AND email = $2`,
       [jobId, email]
     );
-    if (dupCheck.rows.length > 0) throw Object.assign(new Error('You have already applied for this job'), { status: 409 });
+    if (dupCheck.rows.length > 0) throw new ConflictError('You have already applied for this job');
 
     let status, waitlistPosition;
 
@@ -162,7 +180,7 @@ async function exitApplicant(applicantId, reason) {
       `SELECT * FROM applicants WHERE id = $1 AND status = 'active'`,
       [applicantId]
     );
-    if (!result.rows[0]) throw Object.assign(new Error('Applicant not found or not active'), { status: 404 });
+    if (!result.rows[0]) throw new NotFoundError('Applicant not found or not active');
 
     const applicant = result.rows[0];
 
@@ -202,12 +220,12 @@ async function acknowledgePromotion(applicantId) {
       `SELECT * FROM applicants WHERE id = $1 AND status = 'pending_acknowledgment'`,
       [applicantId]
     );
-    if (!result.rows[0]) throw Object.assign(new Error('No pending acknowledgment found'), { status: 404 });
+    if (!result.rows[0]) throw new NotFoundError('No pending acknowledgment found');
 
     const applicant = result.rows[0];
 
     if (new Date() > new Date(applicant.acknowledge_deadline)) {
-      throw Object.assign(new Error('Acknowledgment window has expired'), { status: 410 });
+      throw new GoneError('Acknowledgment window has expired');
     }
 
     await client.query(
@@ -235,4 +253,12 @@ async function acknowledgePromotion(applicantId) {
   }
 }
 
-module.exports = { applyForJob, exitApplicant, acknowledgePromotion, promoteNext, logEvent };
+module.exports = {
+  applyForJob,
+  exitApplicant,
+  acknowledgePromotion,
+  promoteNext,
+  logEvent,
+  getApplicantStatus,
+  getApplicantLog
+};

@@ -83,4 +83,4 @@ function startDecayChecker() {
   checkDecay();
 }
 
-module.exports = { startDecayChecker };
+module.exports = { startDecayChecker, checkDecay };
