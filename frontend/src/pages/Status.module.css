@@ -1,0 +1,158 @@
+.statusRoot {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+}
+.statusCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 36px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: var(--shadow);
+  animation: fadeIn 0.35s ease both;
+}
+.statusGreeting {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.statusEmail {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 28px;
+}
+.statusBox {
+  border-radius: 12px;
+  padding: 22px;
+  margin-bottom: 22px;
+  border: 1.5px solid;
+}
+.statusIconRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.statusIcon { font-size: 26px; }
+.statusLabel {
+  font-size: 17px;
+  font-weight: 800;
+}
+.statusDesc {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-top: 4px;
+}
+.statusPositionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 20px;
+  font-weight: 900;
+  margin-top: 10px;
+}
+/* Per-status theming */
+.sActive    { background: rgba(34,211,160,0.08); border-color: rgba(34,211,160,0.3); }
+.sPending   { background: rgba(245,200,66,0.08);  border-color: rgba(245,200,66,0.3); }
+.sWaitlisted{ background: rgba(161,139,250,0.08); border-color: rgba(161,139,250,0.3); }
+.sHired     { background: rgba(34,211,160,0.12); border-color: rgba(34,211,160,0.4); }
+.sRejected  { background: rgba(255,91,91,0.08);  border-color: rgba(255,91,91,0.3); }
+.sWithdrawn { background: rgba(107,112,153,0.08); border-color: rgba(107,112,153,0.3); }
+
+.cActive    { color: var(--green); }
+.cPending   { color: var(--yellow); }
+.cWaitlisted{ color: var(--purple); }
+.cHired     { color: var(--green); }
+.cRejected  { color: var(--red); }
+.cWithdrawn { color: var(--text-muted); }
+
+.ackPanel {
+  background: rgba(245,200,66,0.06);
+  border: 1px solid rgba(245,200,66,0.2);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 4px;
+}
+.ackWarn {
+  font-size: 13px;
+  color: #c9a227;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.btnAck {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--yellow), #d4a017);
+  color: #1a1200;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 20px rgba(245,200,66,0.3);
+  margin-top: 12px;
+}
+.btnAck:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 28px rgba(245,200,66,0.45);
+}
+.ackDoneBox {
+  background: rgba(34,211,160,0.1);
+  border: 1px solid rgba(34,211,160,0.25);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 15px;
+  margin-top: 4px;
+}
+.errBox {
+  background: rgba(255,91,91,0.1);
+  border: 1px solid rgba(255,91,91,0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #ff8080;
+  font-size: 13px;
+  margin-top: 12px;
+}
+.refreshBtn {
+  width: 100%;
+  padding: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 18px;
+  transition: border-color 0.2s;
+}
+.refreshBtn:hover { border-color: var(--blue); color: var(--blue); }
+.brandLink {
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.brandLink a { color: var(--blue); font-weight: 600; }
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 16px;
+}

@@ -7,13 +7,7 @@
     "start": "node backend/server.js",
     "test": "jest --forceExit"
   },
-  "jest": {
-    "testEnvironment": "node",
-    "roots": ["<rootDir>/backend/__tests__"],
-    "testMatch": ["**/*.test.js"],
-    "coverageDirectory": "coverage",
-    "collectCoverageFrom": ["backend/**/*.js", "!backend/server.js"]
-  },
+
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",

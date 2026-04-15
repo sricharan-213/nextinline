@@ -1,0 +1,241 @@
+.dbRoot {
+  min-height: 100vh;
+  background: var(--bg);
+}
+.dbTopbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.dbTopbarBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 18px;
+  background: linear-gradient(135deg, #fff 30%, var(--blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.dbTopbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dbRefreshBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 0.2s, color 0.2s;
+}
+.dbRefreshBtn:hover { border-color: var(--blue); color: var(--blue); }
+.dbLiveDot {
+  width: 8px; height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse-ring 2s ease infinite;
+  display: inline-block;
+}
+.dbWrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 24px;
+}
+.dbHeader {
+  margin-bottom: 28px;
+  animation: fadeIn 0.35s ease both;
+}
+.dbJobTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.dbMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.dbMetaChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.dbShareBox {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  animation: fadeIn 0.4s ease both;
+}
+.dbShareLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dbShareUrl {
+  flex: 1;
+  font-size: 13px;
+  color: var(--blue);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dbCopyBtn {
+  padding: 5px 12px;
+  background: var(--blue-glow);
+  border: 1px solid rgba(79,125,255,0.3);
+  border-radius: 6px;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.dbCopyBtn:hover { background: rgba(79,125,255,0.2); }
+.dbStatsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.dbStatCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  animation: fadeIn 0.4s ease both;
+  transition: border-color 0.25s, transform 0.25s;
+}
+.dbStatCard:hover { border-color: rgba(79,125,255,0.3); transform: translateY(-2px); }
+.dbStatLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.dbStatValue {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+.dbStatSub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.dbStatBar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.dbStatBarFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.dbPipelineGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 28px;
+}
+.dbPipelineCol {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  animation: fadeIn 0.4s ease both;
+}
+.dbColHeader {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dbColTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.dbColBadge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+.badgeActive   { background: rgba(34,211,160,0.15); color: var(--green); }
+.badgePending  { background: rgba(245,200,66,0.15);  color: var(--yellow); }
+.badgeWaitlist { background: rgba(161,139,250,0.15); color: var(--purple); }
+.dbColBody {
+  padding: 14px;
+  min-height: 160px;
+}
+.dbEmpty {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.dbEmpty span { display: block; font-size: 28px; margin-bottom: 8px; opacity: 0.4; }
+.loadingScreen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 16px;
+  color: var(--text-muted);
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@media (max-width: 900px) {
+  .dbPipelineGrid { grid-template-columns: 1fr; }
+  .dbStatsRow { grid-template-columns: repeat(2, 1fr); }
+  .dbTopbar { padding: 0 16px; }
+  .dbWrap { padding: 16px; }
+}

@@ -1,0 +1,144 @@
+.applyRoot {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(34,211,160,0.1) 0%, transparent 60%),
+              var(--bg);
+}
+.applyCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow);
+  animation: fadeIn 0.4s ease both;
+}
+.applyIcon {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, rgba(34,211,160,0.2), rgba(79,125,255,0.2));
+  border: 1px solid rgba(34,211,160,0.3);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+.applyCard h1 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.applyCard .sub {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 28px;
+}
+.fieldLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+.fieldInput {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  margin-bottom: 18px;
+}
+.fieldInput:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(34,211,160,0.12);
+}
+.fieldInput::placeholder { color: var(--text-muted); }
+.btnApply {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--green) 0%, #16a37a 100%);
+  color: #0a0b0f;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  box-shadow: 0 4px 20px rgba(34,211,160,0.3);
+}
+.btnApply:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 28px rgba(34,211,160,0.45);
+}
+.btnApply:disabled { opacity: 0.6; cursor: not-allowed; }
+.errBox {
+  background: rgba(255,91,91,0.1);
+  border: 1px solid rgba(255,91,91,0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #ff8080;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.successBox {
+  background: rgba(34,211,160,0.08);
+  border: 1px solid rgba(34,211,160,0.25);
+  border-radius: 12px;
+  padding: 24px;
+}
+.successIcon {
+  width: 52px; height: 52px;
+  background: rgba(34,211,160,0.15);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+.successTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--green);
+  margin-bottom: 8px;
+}
+.successBody {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+.btnStatusLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color 0.2s;
+}
+.btnStatusLink:hover { border-color: var(--blue); color: var(--blue); }
+.waitlistBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(161,139,250,0.15);
+  border: 1px solid rgba(161,139,250,0.3);
+  color: var(--purple);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
