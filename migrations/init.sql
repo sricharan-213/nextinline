@@ -29,7 +29,8 @@ CREATE TABLE applicants (
   promoted_at TIMESTAMPTZ,
   acknowledge_deadline TIMESTAMPTZ,
   applied_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_job_email UNIQUE (job_id, email)
 );
 
 CREATE TABLE audit_log (

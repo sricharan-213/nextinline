@@ -61,7 +61,14 @@ async function checkDecay() {
         console.log(`[DecayService] Applicant ${applicant.id} decayed to position ${penalizedPosition}, next person promoted`);
       } catch (err) {
         await client.query('ROLLBACK');
-        console.error(`[DecayService] Error processing applicant ${applicant.id}:`, err.message);
+        // Structured error log with context to aid production debugging
+        console.error('[DecayService] Failed to process decay for applicant', {
+          applicant_id: applicant.id,
+          job_id: applicant.job_id,
+          error_message: err.message,
+          error_code: err.code || 'UNKNOWN',
+          stack: err.stack
+        });
       }
     }
   } finally {

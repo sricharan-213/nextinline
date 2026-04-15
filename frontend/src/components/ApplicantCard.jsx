@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import CountdownTimer from './CountdownTimer';
 
 const css = `
   .acard {
@@ -82,15 +83,8 @@ const css = `
     transition: background 0.2s;
   }
   .exit-btn:hover { background: rgba(255,91,91,0.2); }
-  .deadline-mini {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    color: var(--yellow);
-    margin-top: 5px;
-    font-weight: 600;
-  }
+  /* compact countdown uses CountdownTimer component — no duplication */
+  .deadline-compact { margin-top: 8px; transform: scale(0.85); transform-origin: left; }
 `;
 
 function timeAgo(date) {
@@ -100,25 +94,8 @@ function timeAgo(date) {
   return `${Math.floor(diff / 60)}h ago`;
 }
 
-function miniCountdown(deadline) {
-  if (!deadline) return null;
-  const diff = new Date(deadline) - Date.now();
-  if (diff <= 0) return 'Expired';
-  const m = Math.floor(diff / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  return `${m}m ${s}s`;
-}
-
 export default function ApplicantCard({ applicant, onExit, showExit }) {
   const [reason, setReason] = useState('rejected');
-  const [tick, setTick] = useState(0);
-
-  // Re-render every second only if deadline exists
-  useState(() => {
-    if (!applicant.acknowledge_deadline) return;
-    const t = setInterval(() => setTick(x => x + 1), 1000);
-    return () => clearInterval(t);
-  });
 
   return (
     <>
@@ -130,8 +107,9 @@ export default function ApplicantCard({ applicant, onExit, showExit }) {
             <p className="acard-email">{applicant.email}</p>
             <p className="acard-meta">Updated {timeAgo(applicant.updated_at)}</p>
             {applicant.acknowledge_deadline && (
-              <div className="deadline-mini">
-                ⏱ {miniCountdown(applicant.acknowledge_deadline)}
+              <div className="deadline-compact">
+                {/* Reuse CountdownTimer — no duplicated countdown logic */}
+                <CountdownTimer deadline={applicant.acknowledge_deadline} />
               </div>
             )}
           </div>

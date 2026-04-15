@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+// dotenv is loaded once in server.js (entry point) — no need to re-load here
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
