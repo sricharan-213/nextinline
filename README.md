@@ -2,7 +2,7 @@
 
 > **Hiring pipelines that move themselves.**
 
-A full-stack hiring pipeline management tool built with the **PERN stack** (PostgreSQL, Express, React, Node.js). NextInLine automates candidate promotion, acknowledgment windows, and decay penalties — no manual queue management required.
+A full-stack hiring pipeline management tool built with the **PERN stack** (PostgreSQL, Express, React, Node.js). NextInLine automates candidate promotion, acknowledgment windows, and decay penalties — ensuring zero manual intervention for stale pipelines.
 
 ---
 
@@ -13,40 +13,27 @@ A full-stack hiring pipeline management tool built with the **PERN stack** (Post
 | 🎯 **Active Pipeline** | Fixed-capacity slots with automatic promotion from waitlist |
 | ⏱ **Acknowledgment Windows** | Promoted candidates must acknowledge within a configurable window |
 | 📉 **Decay Penalties** | Late acknowledgments send candidates back to waitlist at a penalized position |
-| 🔐 **Advisory Locks** | PostgreSQL `pg_advisory_xact_lock` prevents race conditions on the last slot |
-| 📋 **Full Audit Log** | Every status transition is recorded with timestamps and metadata |
-| 🔄 **Auto Cascade** | Decay triggers the next promotion automatically |
-| 🚫 **Duplicate Guard** | One application per email per job, enforced at DB level |
+| 🔐 **Concurrency Guard** | PostgreSQL `pg_advisory_xact_lock` prevents "Last Slot" race conditions |
+| 📋 **Full Audit Log** | Every state transition is recorded with timestamps and metadata |
+| 🔄 **Auto Cascade** | Decay triggers the next promotion automatically in a self-healing loop |
 
 ---
 
-## 🏗 Architecture
+## 🏗 Project Structure
 
 ```
 nextinline/
 ├── backend/
 │   ├── db.js                      # PostgreSQL pool
 │   ├── server.js                  # Express app + server
-│   ├── routes/
-│   │   ├── companies.js           # POST /api/companies, GET /api/companies/:id
-│   │   ├── jobs.js                # POST /api/jobs, GET pipeline + audit
-│   │   └── applicants.js          # apply, status, acknowledge, exit, log
 │   ├── services/
 │   │   ├── pipelineService.js     # Core state machine logic
 │   │   └── decayService.js        # 30s polling decay checker
-│   └── middleware/
-│       └── errorHandler.js
 ├── frontend/
 │   └── src/
 │       ├── pages/
-│       │   ├── Home.jsx           # Company + Job creation wizard
 │       │   ├── Dashboard.jsx      # Live pipeline view (10s polling)
-│       │   ├── Apply.jsx          # Candidate application form
 │       │   └── Status.jsx         # Candidate status + acknowledge
-│       └── components/
-│           ├── ApplicantCard.jsx  # Card with exit controls
-│           ├── CountdownTimer.jsx # Live countdown with 3-phase colors
-│           └── AuditLog.jsx       # Paginated event table
 └── migrations/
     └── init.sql                   # Full DB schema
 ```
@@ -55,138 +42,91 @@ nextinline/
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### 1. Prerequisites
 - Node.js 18+
 - PostgreSQL 14+
 
-### 1. Clone and Install
-
+### 2. Setup Database
 ```bash
-# Install backend dependencies (from root nextinline/)
-npm install
-
-# Install frontend dependencies
-cd frontend && npm install && cd ..
-```
-
-### 2. Set Up Database
-
-```bash
-# Create the database
 createdb nextinline
-
-# Run the schema migration
 psql -d nextinline -f migrations/init.sql
 ```
 
-### 3. Configure Environment
-
+### 3. Install & Run
+**Backend:**
 ```bash
-# Copy the example env file
-cp .env.example .env
+npm install && npm run dev
 ```
 
-Edit `.env` and set your database password:
-```
-DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/nextinline
-PORT=5000
-```
-
-### 4. Run the App
-
-**Terminal 1 — Backend:**
+**Frontend:**
 ```bash
-npm run dev
+cd frontend && npm install && npm run dev
 ```
-
-**Terminal 2 — Frontend:**
-```bash
-cd frontend && npm run dev
-```
-
-- Backend: http://localhost:5000
-- Frontend: http://localhost:3000
 
 ---
 
-## 🔌 API Reference
+## 🔬 Technical Design Decisions
+
+## 🏗 Architecture & Design Decisions
+
+### 1. The Concurrency Problem: Solving the "Last Slot" Race (Requirement #5)
+**The Scenario**: A job has 1 slot left. Two applicants submit at the exact same millisecond.
+**The Risk**: Both requests read the database, see `count < capacity`, and both proceed to `INSERT` as `active`. The pipeline is now over-capacity.
+**The Solution**: We implement **Transactional Advisory Locks** (`pg_try_advisory_xact_lock`). 
+- Instead of locking the whole `applicants` table (which would stop all applications globally), we generate a deterministic lock ID based on the `job_id`.
+- The first request to hit the block acquires the lock; the second request is forced to wait or retry using our **exponential backoff** mechanism.
+- This ensures that capacity checks and insertions are atomic per job.
+
+### 2. The Decay Algorithm (Requirement #7)
+When an applicant is promoted, they enter a `pending_acknowledgment` state. We define a **30-minute window** (configurable per job) for them to respond.
+**The Penalty Model**: If they miss the window, they aren't rejected (keeping the system human-centric). Instead, they are moved back to the waitlist.
+- **Logic**: `new_position = MAX(waitlist_position) + penalty_buffer`
+- **Rationale**: Simply putting them at the back (`MAX`) isn't enough of a deterrent. Adding a `penalty_buffer` creates a "cooling off" period, ensuring that active waitlisted candidates who *are* paying attention get a fair chance to move up even if a decaying candidate has a low original ID.
+- **The Cascade**: The `decayService` doesn't just penalize; it immediately triggers `promoteNext()` within the same transaction. This creates a **self-healing cascade** where one person's delay instantly becomes another person's opportunity.
+
+### 3. Frontend Strategy: "Right-Sized" Infrastructure
+**Context**: Hiring managers operate at "human speed," not sub-second trading frequency.
+**Decision**: We chose **10-second polling** over WebSockets.
+- **Why?** WebSockets require persistent connections and often a Pub/Sub layer (like Redis) to scale. Polling is stateless, leverages browser caching efficiently, and significantly reduces backend complexity.
+- **Implementation**: The dashboard reflects the live pipeline state within 10 seconds, providing a "live enough" feel without the infrastructure overhead of real-time protocols.
+
+---
+
+## 🔌 API Documentation (Requirement #14)
 
 ### Companies
 - **POST `/api/companies`**
-  - Input: `{ "name": "string", "email": "string" }`
-  - Output: `{ "id": "uuid", "name": "...", "email": "..." }`
-- **GET `/api/companies/:id`**
-  - Output: `{ "id": "uuid", "name": "...", "email": "..." }`
+  - **Input**: `{ "name": "Google", "email": "hr@google.com" }`
+  - **Output**: The created company object (201 Created).
 
 ### Jobs
 - **POST `/api/jobs`**
-  - Input: `{ "title": "string", "company_id": "uuid", "active_capacity": number, "acknowledge_window_minutes": number }`
-  - Output: Full job object including ID.
+  - **Input**: `{ "title": "Senior Engineer", "active_capacity": 3, "acknowledge_window_minutes": 60 }`
+  - **Output**: Job object with unique ID.
 - **GET `/api/jobs/:id/pipeline`**
-  - Output: `[{ "id": "...", "name": "...", "status": "active|waitlisted|pending_acknowledgment", "waitlist_position": number|null }]`
-- **GET `/api/jobs/:id/audit`**
-  - Output: Paginated array of transition events.
+  - **Output**: Returns an ordered list of current `active`, `pending`, and `waitlisted` candidates.
 
 ### Applicants
 - **POST `/api/applicants`**
-  - Input: `{ "job_id": "uuid", "name": "string", "email": "string" }`
-  - Output: Applicant object with status and position.
-- **GET `/api/applicants/:id/status`**
-  - Output: Current status, deadlines, and waitlist position.
+  - **Input**: `{ "job_id": "uuid", "name": "Alice", "email": "alice@email.com" }`
+  - **Output**: Applicant object + initial queue position.
 - **POST `/api/applicants/:id/acknowledge`**
-  - Output: `{ "success": true }`
+  - **Effect**: Moves status to `active`. Fails if window expired.
 - **POST `/api/applicants/:id/exit`**
-  - Input: `{ "reason": "hired" | "rejected" | "withdrawn" }`
-  - Output: `{ "success": true }`
+  - **Input**: `{ "reason": "hired" | "rejected" | "withdrawn" }`
+  - **Effect**: Triggers the `promoteNext` cascade.
 
 ---
 
-## ⚙️ Pipeline State Machine
+## 🚀 Future Improvements (Requirement #15)
 
-```
-           ┌─────────────────────────────────┐
-           │           applied                │
-           ▼                                 │
-    [has capacity?]                          │
-       /       \                             │
-     YES        NO                          │
-      │          │                          │
-      ▼          ▼                          │
-    active    waitlisted ◄──── decayed ──────┤
-      │          │            (penalty)     │
-      │          │                          │
-   [exit]    [promoted]                     │
-   /  |  \       │                          │
-hired rej with   ▼                          │
-            pending_acknowledgment          │
-                 │                          │
-          [acknowledge] ──────► active      │
-                 │                          │
-          [timeout] ─────────────────────── ┘
-```
-
----
-
-## 🔧 Design Decisions
-
-1. **No queue libraries** — All scheduling via native `setInterval`.
-2. **No WebSockets** — Deliberate 10-second polling; the pipeline is designed for high-thought human interaction, not sub-second trading.
-3. **Advisory Locks** — `pg_try_advisory_xact_lock` handles concurrent last-slot race conditions at the DB level.
-4. **Decay Cascade** — When a decayed applicant is re-queued, `promoteNext()` is called immediately, creating a self-triggering cascade.
-5. **Audit-first** — Every state transition logs to `audit_log` before the transaction commits.
-
----
-
-## 🔮 Future Improvements
-
-With more time, the following evolutions would be implemented:
-1. **WebSockets Integration**: Transition from polling to real-time events for the dashboard using Socket.io.
-2. **Advanced Rate Limiting**: Implement per-IP rate limiting for the `/apply` endpoint to prevent bot spam.
-3. **Metrics Dashboard**: Add Grafana/Prometheus tracking for average "Time to Hired" and "Waitlist Decay Rate".
-4. **Resilience**: Move the `decayService` interval logic to a dedicated worker process or a heartbeat-monitored system (like Redis-backed `bullmq`) for higher reliability in distributed environments.
+If I had more time, the following evolutions would be prioritized:
+1. **TypeScript Migration**: The core state machine logic in `pipelineService.js` would benefit immensely from strict typing for status transitions.
+2. **Dedicated Worker Thread**: Move the `decayService` polling into a separate worker thread or a cron-based microservice to ensure the main Express event loop remains unblocked during heavy decay sweeps.
+3. **Real-time "Urgency" UI**: Enhance the React frontend with a real-time countdown progress bar for promoted applicants, using `framer-motion` for smoother status transitions.
+4. **Test Database Isolation**: Implement a dedicated PostgreSQL instance for `npm test` to prevent development data pollution.
 
 ---
 
 ## 📄 License
-
 MIT
