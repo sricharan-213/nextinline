@@ -97,10 +97,10 @@ describe('checkDecay', () => {
     };
     pool.connect = jest.fn().mockResolvedValue(client);
 
-    // Should now throw because the catch block re-throws
-    await expect(checkDecay()).rejects.toThrow('DB error for a1');
-    expect(queryCount).toBe(2); // BEGIN, find expired, first applicant UPDATE fails
+    // Should NOT throw — loop should continue for a2 even if a1 fails
+    await expect(checkDecay()).resolves.not.toThrow();
+    expect(queryCount).toBeGreaterThan(2); 
     expect(client.release).toHaveBeenCalled();
-    expect(promoteNext).not.toHaveBeenCalled();
+    expect(promoteNext).toHaveBeenCalledTimes(1); // called once for a2 since a1 failed
   });
 });

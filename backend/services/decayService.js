@@ -64,10 +64,9 @@ async function checkDecay() {
         await client.query('ROLLBACK');
         if (err instanceof AppError) {
           console.error(`[DecayService] Business error for ${applicant.id}: ${err.message}`);
-          throw err;
+        } else {
+          console.error('[DecayService] Unexpected error', { applicant_id: applicant.id, error: err.message });
         }
-        console.error('[DecayService] Unexpected error', { applicant_id: applicant.id, error: err.message });
-        throw err;
       }
     }
   } finally {

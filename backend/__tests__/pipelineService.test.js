@@ -30,6 +30,8 @@ const {
   applyForJob,
   exitApplicant,
   acknowledgePromotion,
+  promoteNext,
+  logEvent,
   getApplicantStatus,
   getApplicantLog
 } = require('../services/pipelineService');
@@ -275,5 +277,49 @@ describe('exitApplicant', () => {
     expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/UPDATE applicants[\s\S]*status = \$1/i), expect.arrayContaining(['hired', 'a1']));
     expect(client.query).toHaveBeenCalledWith('COMMIT');
     expect(client.release).toHaveBeenCalled();
+  });
+});
+
+// ─── promoteNext ──────────────────────────────────────────────────────────────
+
+describe('promoteNext', () => {
+  test('returns null when waitlist is empty', async () => {
+    const client = makeMockClient([{ rows: [] }]); // getNextWaitlisted returns empty
+    const result = await promoteNext(client, 'job-1');
+    expect(result).toBeNull();
+    expect(client.query).toHaveBeenCalledTimes(1);
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/FROM applicants/i), ['job-1']);
+  });
+
+  test('successfully promotes the next applicant', async () => {
+    const nextApplicant = { id: 'a1', waitlist_position: 1 };
+    const client = makeMockClient([
+      { rows: [nextApplicant] }, // getNextWaitlisted
+      { rows: [{ acknowledge_window_minutes: 30 }] }, // job lookup
+      { rows: [] }, // UPDATE applicants
+      { rows: [] }  // logEvent
+    ]);
+    const result = await promoteNext(client, 'job-1');
+    expect(result).toEqual(nextApplicant);
+    expect(client.query).toHaveBeenCalledTimes(4);
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/UPDATE applicants[\s\S]*pending_acknowledgment/i), expect.anything());
+  });
+});
+
+// ─── logEvent ─────────────────────────────────────────────────────────────────
+
+describe('logEvent', () => {
+  test('uses provided client for query', async () => {
+    const client = { query: jest.fn() };
+    await logEvent({ client, applicantId: 'a1', jobId: 'j1', event: 'test' });
+    expect(client.query).toHaveBeenCalledTimes(1);
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/INSERT INTO audit_log/i), expect.any(Array));
+  });
+
+  test('uses pool when client is not provided', async () => {
+    pool.query = jest.fn().mockResolvedValue({ rows: [] });
+    await logEvent({ applicantId: 'a1', jobId: 'j1', event: 'test' });
+    expect(pool.query).toHaveBeenCalledTimes(1);
+    expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/INSERT INTO audit_log/i), expect.any(Array));
   });
 });
