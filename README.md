@@ -112,27 +112,32 @@ cd frontend && npm run dev
 ## 🔌 API Reference
 
 ### Companies
-| Method | Endpoint | Body | Description |
-|--------|----------|------|-------------|
-| POST | `/api/companies` | `{ name, email }` | Create a company |
-| GET  | `/api/companies/:id` | — | Get company by ID |
+- **POST `/api/companies`**
+  - Input: `{ "name": "string", "email": "string" }`
+  - Output: `{ "id": "uuid", "name": "...", "email": "..." }`
+- **GET `/api/companies/:id`**
+  - Output: `{ "id": "uuid", "name": "...", "email": "..." }`
 
 ### Jobs
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/jobs` | Create job opening |
-| GET  | `/api/jobs/:id` | Get job details |
-| GET  | `/api/jobs/:id/pipeline` | Full live pipeline state |
-| GET  | `/api/jobs/:id/audit` | Paginated audit log |
+- **POST `/api/jobs`**
+  - Input: `{ "title": "string", "company_id": "uuid", "active_capacity": number, "acknowledge_window_minutes": number }`
+  - Output: Full job object including ID.
+- **GET `/api/jobs/:id/pipeline`**
+  - Output: `[{ "id": "...", "name": "...", "status": "active|waitlisted|pending_acknowledgment", "waitlist_position": number|null }]`
+- **GET `/api/jobs/:id/audit`**
+  - Output: Paginated array of transition events.
 
 ### Applicants
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/applicants` | Submit application |
-| GET  | `/api/applicants/:id/status` | Get applicant status |
-| POST | `/api/applicants/:id/acknowledge` | Acknowledge promotion |
-| POST | `/api/applicants/:id/exit` | Exit (hired/rejected/withdrawn) |
-| GET  | `/api/applicants/:id/log` | Get applicant audit trail |
+- **POST `/api/applicants`**
+  - Input: `{ "job_id": "uuid", "name": "string", "email": "string" }`
+  - Output: Applicant object with status and position.
+- **GET `/api/applicants/:id/status`**
+  - Output: Current status, deadlines, and waitlist position.
+- **POST `/api/applicants/:id/acknowledge`**
+  - Output: `{ "success": true }`
+- **POST `/api/applicants/:id/exit`**
+  - Input: `{ "reason": "hired" | "rejected" | "withdrawn" }`
+  - Output: `{ "success": true }`
 
 ---
 
@@ -147,7 +152,7 @@ cd frontend && npm run dev
      YES        NO                          │
       │          │                          │
       ▼          ▼                          │
-   active    waitlisted ◄──── decayed ──────┤
+    active    waitlisted ◄──── decayed ──────┤
       │          │            (penalty)     │
       │          │                          │
    [exit]    [promoted]                     │
@@ -164,11 +169,21 @@ hired rej with   ▼                          │
 
 ## 🔧 Design Decisions
 
-1. **No queue libraries** — All scheduling via native `setInterval`
-2. **No WebSockets** — Deliberate 10-second polling; pipeline doesn't need sub-second updates
-3. **Advisory Locks** — `pg_try_advisory_xact_lock` handles concurrent last-slot race conditions at the DB level
-4. **Decay Cascade** — When a decayed applicant is re-queued, `promoteNext()` is called immediately, creating a self-triggering cascade
-5. **Audit-first** — Every state transition logs to `audit_log` before the transaction commits
+1. **No queue libraries** — All scheduling via native `setInterval`.
+2. **No WebSockets** — Deliberate 10-second polling; the pipeline is designed for high-thought human interaction, not sub-second trading.
+3. **Advisory Locks** — `pg_try_advisory_xact_lock` handles concurrent last-slot race conditions at the DB level.
+4. **Decay Cascade** — When a decayed applicant is re-queued, `promoteNext()` is called immediately, creating a self-triggering cascade.
+5. **Audit-first** — Every state transition logs to `audit_log` before the transaction commits.
+
+---
+
+## 🔮 Future Improvements
+
+With more time, the following evolutions would be implemented:
+1. **WebSockets Integration**: Transition from polling to real-time events for the dashboard using Socket.io.
+2. **Advanced Rate Limiting**: Implement per-IP rate limiting for the `/apply` endpoint to prevent bot spam.
+3. **Metrics Dashboard**: Add Grafana/Prometheus tracking for average "Time to Hired" and "Waitlist Decay Rate".
+4. **Resilience**: Move the `decayService` interval logic to a dedicated worker process or a heartbeat-monitored system (like Redis-backed `bullmq`) for higher reliability in distributed environments.
 
 ---
 
