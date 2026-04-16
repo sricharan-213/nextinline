@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { promoteNext, logEvent } = require('./pipelineService');
+const { NotFoundError, ConflictError, AppError } = require('../utils/AppError');
 
 // Runs every 30 seconds. No external libraries.
 // Finds expired pending_acknowledgment applicants, penalizes and re-queues them, then cascades promotions.
@@ -61,14 +62,17 @@ async function checkDecay() {
         console.log(`[DecayService] Applicant ${applicant.id} decayed to position ${penalizedPosition}, next person promoted`);
       } catch (err) {
         await client.query('ROLLBACK');
-        // Structured error log with context to aid production debugging
-        console.error('[DecayService] Failed to process decay for applicant', {
-          applicant_id: applicant.id,
-          job_id: applicant.job_id,
-          error_message: err.message,
-          error_code: err.code || 'UNKNOWN',
-          stack: err.stack
-        });
+        if (err instanceof NotFoundError || err instanceof ConflictError || err instanceof AppError) {
+          console.error(`[DecayService] Business logic error during decay for applicant ${applicant.id}: ${err.message}`);
+        } else {
+          console.error('[DecayService] Unexpected failure to process decay for applicant', {
+            applicant_id: applicant.id,
+            job_id: applicant.job_id,
+            error_message: err.message,
+            error_code: err.code || 'UNKNOWN',
+            stack: err.stack
+          });
+        }
       }
     }
   } finally {

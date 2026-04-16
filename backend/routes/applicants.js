@@ -8,8 +8,8 @@ const {
   getApplicantLog
 } = require('../services/pipelineService');
 
-// POST /api/applicants — submit application
-router.post('/', async (req, res, next) => {
+// POST /api/applicants/apply — submit application
+router.post('/apply', async (req, res, next) => {
   try {
     const { job_id, name, email } = req.body;
     if (!job_id || !name || !email) {

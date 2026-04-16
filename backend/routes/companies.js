@@ -1,6 +1,14 @@
 const router = require('express').Router();
 const { ValidationError } = require('../utils/AppError');
-const { createCompany, getCompanyById } = require('../services/companyService');
+const { createCompany, getCompanyById, getAllCompanies } = require('../services/companyService');
+
+// GET /api/companies
+router.get('/', async (req, res, next) => {
+  try {
+    const companies = await getAllCompanies();
+    res.json(companies);
+  } catch (err) { next(err); }
+});
 
 // POST /api/companies
 router.post('/', async (req, res, next) => {

@@ -68,4 +68,12 @@ async function getAuditLog(id, page = 1, limit = 50) {
   return result.rows;
 }
 
-module.exports = { createJob, getJobById, getPipelineState, getAuditLog };
+/**
+ * Returns all jobs.
+ */
+async function getAllJobs() {
+  const result = await pool.query(`SELECT * FROM jobs ORDER BY created_at DESC`);
+  return result.rows;
+}
+
+module.exports = { createJob, getJobById, getPipelineState, getAuditLog, getAllJobs };

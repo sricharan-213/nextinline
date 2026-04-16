@@ -1,6 +1,14 @@
 const router = require('express').Router();
 const { ValidationError } = require('../utils/AppError');
-const { createJob, getJobById, getPipelineState, getAuditLog } = require('../services/jobService');
+const { createJob, getJobById, getPipelineState, getAuditLog, getAllJobs } = require('../services/jobService');
+
+// GET /api/jobs
+router.get('/', async (req, res, next) => {
+  try {
+    const jobs = await getAllJobs();
+    res.json(jobs);
+  } catch (err) { next(err); }
+});
 
 // POST /api/jobs
 router.post('/', async (req, res, next) => {

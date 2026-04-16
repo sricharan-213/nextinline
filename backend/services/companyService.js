@@ -28,4 +28,12 @@ async function getCompanyById(id) {
   return result.rows[0];
 }
 
-module.exports = { createCompany, getCompanyById };
+/**
+ * Returns all companies.
+ */
+async function getAllCompanies() {
+  const result = await pool.query(`SELECT * FROM companies ORDER BY name ASC`);
+  return result.rows;
+}
+
+module.exports = { createCompany, getCompanyById, getAllCompanies };
