@@ -59,10 +59,12 @@ export default function Status() {
     setErr('');
     try {
       const r = await fetch(`/api/applicants/${applicantId}/status`);
+      if (!r.ok) throw new Error(r.statusText);
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
       setData(d);
-    } catch (e) { setErr(e.message); }
+    } catch (e) {
+      setErr(e.message);
+    }
     setLoading(false);
   }
 
@@ -74,11 +76,15 @@ export default function Status() {
 
   async function acknowledge() {
     setErr('');
-    const r = await fetch(`/api/applicants/${applicantId}/acknowledge`, { method: 'POST' });
-    const d = await r.json();
-    if (!r.ok) { setErr(d.error); return; }
-    setAckDone(true);
-    fetchStatus();
+    try {
+      const r = await fetch(`/api/applicants/${applicantId}/acknowledge`, { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || r.statusText);
+      setAckDone(true);
+      fetchStatus();
+    } catch (e) {
+      setErr(e.message);
+    }
   }
 
   if (loading) return (

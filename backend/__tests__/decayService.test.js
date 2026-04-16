@@ -34,8 +34,9 @@ describe('checkDecay', () => {
     pool.connect = jest.fn().mockResolvedValue(client);
 
     await checkDecay();
-
     expect(promoteNext).not.toHaveBeenCalled();
+    expect(logEvent).not.toHaveBeenCalled();
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/FROM applicants[\s\S]*WHERE[\s\S]*status = 'pending_acknowledgment'/));
     expect(client.release).toHaveBeenCalled();
   });
 
@@ -54,13 +55,13 @@ describe('checkDecay', () => {
     pool.connect = jest.fn().mockResolvedValue(client);
 
     await checkDecay();
-
     // Should have updated the applicant with penalized position (5 + 10 = 15)
     const updateCall = client.query.mock.calls.find(
       call => typeof call[0] === 'string' && call[0].includes('UPDATE applicants')
     );
     expect(updateCall).toBeDefined();
-    expect(updateCall[1][0]).toBe(15); // penalized position = max_pos + decay_penalty
+    expect(updateCall[1][0]).toBe(15); 
+    expect(updateCall[1][1]).toBe('a1');
 
     expect(logEvent).toHaveBeenCalledWith(
       client,
@@ -73,6 +74,7 @@ describe('checkDecay', () => {
       })
     );
     expect(promoteNext).toHaveBeenCalledWith(client, 'j1');
+    expect(client.query).toHaveBeenCalledWith('COMMIT');
     expect(client.release).toHaveBeenCalled();
   });
 
@@ -97,6 +99,8 @@ describe('checkDecay', () => {
 
     // Should not throw — errors are caught per-applicant
     await expect(checkDecay()).resolves.not.toThrow();
+    expect(queryCount).toBeGreaterThan(1);
     expect(client.release).toHaveBeenCalled();
+    expect(promoteNext).toHaveBeenCalledTimes(1); // called once for a2, because a1 failed before promoteNext
   });
 });

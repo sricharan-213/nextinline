@@ -48,11 +48,19 @@ describe('getApplicantStatus', () => {
 
     const result = await getApplicantStatus('uuid-1');
     expect(result).toEqual(mockApplicant);
+    expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/SELECT[\s\S]*FROM applicants/), ['uuid-1']);
+    expect(result.name).toBe('Alice');
   });
 
   test('throws NotFoundError when applicant does not exist', async () => {
     pool.query = jest.fn().mockResolvedValue({ rows: [] });
-    await expect(getApplicantStatus('bad-id')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(getApplicantStatus('bad-id')).rejects.toThrow(NotFoundError);
+    expect(pool.query).toHaveBeenCalledWith(expect.any(String), ['bad-id']);
+    try {
+      await getApplicantStatus('bad-id');
+    } catch (e) {
+      expect(e.status).toBe(404);
+    }
   });
 
   test('NotFoundError has status 404', async () => {
@@ -78,8 +86,10 @@ describe('getApplicantLog', () => {
     const events = [{ id: 'e1', event: 'applied' }, { id: 'e2', event: 'promoted' }];
     pool.query = jest.fn().mockResolvedValue({ rows: events });
     const result = await getApplicantLog('uuid-1');
+    expect(Array.isArray(result)).toBe(true);
     expect(result).toHaveLength(2);
     expect(result[0].event).toBe('applied');
+    expect(pool.query).toHaveBeenCalledWith(expect.stringMatching(/FROM audit_log/), ['uuid-1']);
   });
 });
 
@@ -113,8 +123,10 @@ describe('applyForJob', () => {
     pool.connect = jest.fn().mockResolvedValue(client);
 
     const result = await applyForJob('job-1', 'Alice', 'alice@test.com');
+    expect(result).toHaveProperty('id', 'a1');
     expect(result.status).toBe('active');
     expect(client.query).toHaveBeenCalledWith('COMMIT');
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/INSERT INTO applicants/), expect.anything());
     expect(client.release).toHaveBeenCalled();
   });
 
@@ -127,8 +139,9 @@ describe('applyForJob', () => {
     ]);
     pool.connect = jest.fn().mockResolvedValue(client);
 
-    await expect(applyForJob('bad-job', 'Bob', 'b@b.com')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(applyForJob('bad-job', 'Bob', 'b@b.com')).rejects.toThrow(NotFoundError);
     expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/FROM jobs/), expect.arrayContaining(['bad-job']));
     expect(client.release).toHaveBeenCalled();
   });
 
@@ -142,8 +155,9 @@ describe('applyForJob', () => {
     ]);
     pool.connect = jest.fn().mockResolvedValue(client);
 
-    await expect(applyForJob('job-1', 'Alice', 'alice@test.com')).rejects.toBeInstanceOf(ConflictError);
+    await expect(applyForJob('job-1', 'Alice', 'alice@test.com')).rejects.toThrow(ConflictError);
     expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/FROM applicants[\s\S]*email/), expect.arrayContaining(['job-1', 'alice@test.com']));
   });
 
   test('places applicant on waitlist when at capacity', async () => {
@@ -169,6 +183,8 @@ describe('applyForJob', () => {
     const result = await applyForJob('job-1', 'Carol', 'carol@test.com');
     expect(result.status).toBe('waitlisted');
     expect(result.waitlist_position).toBe(1);
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/MAX\(waitlist_position\)/), ['job-1']);
+    expect(client.query).toHaveBeenCalledWith('COMMIT');
   });
 });
 
@@ -179,7 +195,8 @@ describe('acknowledgePromotion', () => {
     const client = makeMockClient([{ rows: [] }]);
     pool.connect = jest.fn().mockResolvedValue(client);
 
-    await expect(acknowledgePromotion('bad-id')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(acknowledgePromotion('bad-id')).rejects.toThrow(NotFoundError);
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/FROM applicants/), ['bad-id']);
     expect(client.release).toHaveBeenCalled();
   });
 
@@ -190,8 +207,9 @@ describe('acknowledgePromotion', () => {
     ]);
     pool.connect = jest.fn().mockResolvedValue(client);
 
-    await expect(acknowledgePromotion('a1')).rejects.toBeInstanceOf(GoneError);
+    await expect(acknowledgePromotion('a1')).rejects.toThrow(GoneError);
     expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/FROM applicants/), ['a1']);
   });
 
   test('acknowledges successfully within deadline', async () => {
@@ -205,6 +223,7 @@ describe('acknowledgePromotion', () => {
 
     const result = await acknowledgePromotion('a1');
     expect(result).toEqual({ success: true });
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/UPDATE applicants[\s\S]*SET status = 'active'/), expect.anything());
     expect(client.query).toHaveBeenCalledWith('COMMIT');
     expect(client.release).toHaveBeenCalled();
   });
@@ -217,7 +236,8 @@ describe('exitApplicant', () => {
     const client = makeMockClient([{ rows: [] }]);
     pool.connect = jest.fn().mockResolvedValue(client);
 
-    await expect(exitApplicant('bad-id', 'hired')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(exitApplicant('bad-id', 'hired')).rejects.toThrow(NotFoundError);
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/FROM applicants/), expect.arrayContaining(['bad-id']));
     expect(client.release).toHaveBeenCalled();
   });
 
@@ -239,6 +259,7 @@ describe('exitApplicant', () => {
 
     const result = await exitApplicant('a1', 'hired');
     expect(result).toEqual({ success: true });
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/UPDATE applicants.*status = \$1/), expect.arrayContaining(['hired', 'a1']));
     expect(client.query).toHaveBeenCalledWith('COMMIT');
     expect(client.release).toHaveBeenCalled();
   });

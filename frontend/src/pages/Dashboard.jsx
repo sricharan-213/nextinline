@@ -9,19 +9,31 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [audit, setAudit] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [copied, setCopied] = useState(false);
 
   const fetchData = useCallback(async () => {
+    setError(null);
     try {
-      const [pipeline, log] = await Promise.all([
-        fetch(`/api/jobs/${jobId}/pipeline`).then(r => r.json()),
-        fetch(`/api/jobs/${jobId}/audit`).then(r => r.json())
+      const [pipelineRes, logRes] = await Promise.all([
+        fetch(`/api/jobs/${jobId}/pipeline`),
+        fetch(`/api/jobs/${jobId}/audit`)
       ]);
+
+      if (!pipelineRes.ok) throw new Error(`Pipeline load failed: ${pipelineRes.statusText}`);
+      if (!logRes.ok) throw new Error(`Audit load failed: ${logRes.statusText}`);
+
+      const pipeline = await pipelineRes.json();
+      const log = await logRes.json();
+
       setData(pipeline);
       setAudit(Array.isArray(log) ? log : []);
       setLastRefresh(new Date());
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setError(e.message);
+    }
     setLoading(false);
   }, [jobId]);
 
@@ -34,12 +46,18 @@ export default function Dashboard() {
   }, [fetchData]);
 
   async function handleExit(applicantId, reason) {
-    await fetch(`/api/applicants/${applicantId}/exit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason })
-    });
-    fetchData();
+    setError(null);
+    try {
+      const res = await fetch(`/api/applicants/${applicantId}/exit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      if (!res.ok) throw new Error(`Action failed: ${res.statusText}`);
+      fetchData();
+    } catch (e) {
+      setError(e.message);
+    }
   }
 
   function copyApplyLink() {
@@ -57,7 +75,8 @@ export default function Dashboard() {
 
   if (!data) return (
     <div className={styles.loadingScreen} style={{ color: 'var(--red)' }}>
-      Failed to load pipeline.
+      {error || 'Failed to load pipeline.'}
+      <button onClick={fetchData} className={styles.dbRefreshBtn} style={{ marginTop: 20 }}>Retry</button>
     </div>
   );
 
@@ -78,6 +97,12 @@ export default function Dashboard() {
       </div>
 
       <div className={styles.dbWrap}>
+        {error && (
+          <div className={styles.errBanner}>
+            <span>⚠ {error}</span>
+            <button onClick={() => setError(null)}>✕</button>
+          </div>
+        )}
         {/* Header */}
         <div className={styles.dbHeader}>
           <h1 className={styles.dbJobTitle}>{data.job.title}</h1>
