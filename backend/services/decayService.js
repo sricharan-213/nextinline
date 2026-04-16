@@ -62,17 +62,12 @@ async function checkDecay() {
         console.log(`[DecayService] Applicant ${applicant.id} decayed to position ${penalizedPosition}, next person promoted`);
       } catch (err) {
         await client.query('ROLLBACK');
-        if (err instanceof NotFoundError || err instanceof ConflictError || err instanceof AppError) {
-          console.error(`[DecayService] Business logic error during decay for applicant ${applicant.id}: ${err.message}`);
-        } else {
-          console.error('[DecayService] Unexpected failure to process decay for applicant', {
-            applicant_id: applicant.id,
-            job_id: applicant.job_id,
-            error_message: err.message,
-            error_code: err.code || 'UNKNOWN',
-            stack: err.stack
-          });
+        if (err instanceof AppError) {
+          console.error(`[DecayService] Business error for ${applicant.id}: ${err.message}`);
+          throw err;
         }
+        console.error('[DecayService] Unexpected error', { applicant_id: applicant.id, error: err.message });
+        throw err;
       }
     }
   } finally {

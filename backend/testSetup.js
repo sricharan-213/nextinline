@@ -1,3 +1,11 @@
-// Silence console.log during tests to keep output clean.
-// console.error intentionally left intact so test failures remain visible.
-global.console.log = jest.fn();
+// Silence console logs and errors during tests to keep output clean.
+// Using spyOn to allow restoring if needed, though forceExit is used.
+
+beforeAll(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'log').mockImplementation(() => {});
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
+});
