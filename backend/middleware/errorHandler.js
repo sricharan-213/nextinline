@@ -2,8 +2,8 @@ const { AppError } = require('../utils/AppError');
 
 module.exports = (err, req, res, next) => {
   // Known application errors — use their built-in status & message
-  if (err instanceof AppError) {
-    return res.status(err.status).json({ error: err.message });
+  if (err instanceof AppError || err.status) {
+    return res.status(err.status || 400).json({ error: err.message });
   }
 
   // PostgreSQL unique constraint violation (e.g. duplicate email per job)

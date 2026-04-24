@@ -1,159 +1,59 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from './Home.module.css';
 
 export default function Home() {
   const nav = useNavigate();
-  const [step, setStep] = useState(1);
-  const [company, setCompany] = useState({ name: '', email: '' });
-  const [job, setJob] = useState({ title: '', active_capacity: 3, acknowledge_window_minutes: 60, decay_penalty: 10 });
-  const [companyId, setCompanyId] = useState(null);
-  const [err, setErr] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  async function createCompany(e) {
-    e.preventDefault();
-    setLoading(true); setErr('');
-    try {
-      const r = await fetch('/api/companies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(company)
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      setCompanyId(d.id);
-      setStep(2);
-    } catch (e) { setErr(e.message); }
-    setLoading(false);
-  }
-
-  async function createJob(e) {
-    e.preventDefault();
-    setLoading(true); setErr('');
-    try {
-      const r = await fetch('/api/jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...job, company_id: companyId, active_capacity: Number(job.active_capacity) })
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      nav(`/dashboard/${d.id}`);
-    } catch (e) { setErr(e.message); }
-    setLoading(false);
-  }
+  const s = {
+    wrap: { minHeight: '100vh', background: '#0a0d14', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 },
+    logo: { color: '#00d4aa', fontWeight: 800, fontSize: 36, marginBottom: 8, letterSpacing: 2 },
+    tagline: { color: '#555', fontSize: 16, marginBottom: 64, letterSpacing: 1 },
+    grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, maxWidth: 720, width: '100%' },
+    card: { background: '#111827', border: '1px solid #1e2235', borderRadius: 20, padding: 40, cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' },
+    iconWrap: { width: 64, height: 64, borderRadius: '50%', background: '#0d2e2a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' },
+    cardTitle: { color: '#fff', fontWeight: 800, fontSize: 22, marginBottom: 10 },
+    cardDesc: { color: '#666', fontSize: 14, lineHeight: 1.7, marginBottom: 28 },
+    cardBtn: (primary) => ({ display: 'block', padding: '12px 24px', borderRadius: 10, fontWeight: 700, fontSize: 15, background: primary ? '#00d4aa' : 'transparent', color: primary ? '#0a0d14' : '#00d4aa', border: primary ? 'none' : '1.5px solid #00d4aa' }),
+    adminLink: { marginTop: 48, color: '#333', fontSize: 13 },
+    adminA: { color: '#555', cursor: 'pointer', marginLeft: 6 }
+  };
 
   return (
-    <div className={styles.homeWrap}>
-      <div className={styles.homeLogo}>
-        <div className={styles.homeLogoIcon}>⚡</div>
-        <span className={styles.homeLogoText}>NextInLine</span>
-      </div>
-      <p className={styles.homeTagline}>Hiring pipelines that move themselves.</p>
+    <div style={s.wrap}>
+      <p style={s.logo}>■ NextInLine</p>
+      <p style={s.tagline}>The Self-Moving Hiring Pipeline</p>
 
-      <div className={styles.homeCard}>
-        <div className={styles.homeStepBadge}>
-          ● STEP {step} OF 2
-        </div>
-        <h2>{step === 1 ? 'Create your company' : 'Configure your job posting'}</h2>
-        <p>
-          {step === 1
-            ? 'Set up your hiring organization to get started.'
-            : 'Define capacity, acknowledgment window, and decay rules.'}
-        </p>
-
-        {err && (
-          <div className={styles.errBox}>
-            <span>⚠</span> {err}
+      <div style={s.grid}>
+        {/* APPLICANT CARD */}
+        <div style={s.card} onClick={() => nav('/applicant')}>
+          <div style={s.iconWrap}>
+            <svg width="28" height="28" fill="none" stroke="#00d4aa" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
           </div>
-        )}
+          <p style={s.cardTitle}>I'm an Applicant</p>
+          <p style={s.cardDesc}>Manage your applications and track your status in real-time. No password or registration required. Just your name and email.</p>
+          <span style={s.cardBtn(true)}>Manage Applications →</span>
+        </div>
 
-        {step === 1 ? (
-          <form onSubmit={createCompany}>
-            <label className={styles.fieldLabel}>Company Name</label>
-            <input
-              id="company-name"
-              className={styles.fieldInput}
-              placeholder="e.g. Acme Corp"
-              value={company.name}
-              onChange={e => setCompany({ ...company, name: e.target.value })}
-              required
-            />
-            <label className={styles.fieldLabel}>Company Email</label>
-            <input
-              id="company-email"
-              className={styles.fieldInput}
-              type="email"
-              placeholder="hiring@acme.com"
-              value={company.email}
-              onChange={e => setCompany({ ...company, email: e.target.value })}
-              required
-            />
-            <button id="btn-next-step" className={styles.btnPrimary} disabled={loading}>
-              {loading ? 'Creating…' : 'Continue →'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={createJob}>
-            <label className={styles.fieldLabel}>Job Title</label>
-            <input
-              id="job-title"
-              className={styles.fieldInput}
-              placeholder="e.g. Senior Frontend Engineer"
-              value={job.title}
-              onChange={e => setJob({ ...job, title: e.target.value })}
-              required
-            />
-            <div className={styles.fieldRow}>
-              <div>
-                <label className={styles.fieldLabel}>Active Capacity</label>
-                <input
-                  id="job-capacity"
-                  className={styles.fieldInput}
-                  type="number" min="1"
-                  value={job.active_capacity}
-                  onChange={e => setJob({ ...job, active_capacity: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className={styles.fieldLabel}>Decay Penalty</label>
-                <input
-                  id="job-decay"
-                  className={styles.fieldInput}
-                  type="number" min="1"
-                  value={job.decay_penalty}
-                  onChange={e => setJob({ ...job, decay_penalty: e.target.value })}
-                />
-              </div>
-            </div>
-            <label className={styles.fieldLabel}>Acknowledgment Window (minutes)</label>
-            <input
-              id="job-ack-window"
-              className={styles.fieldInput}
-              type="number" min="1"
-              value={job.acknowledge_window_minutes}
-              onChange={e => setJob({ ...job, acknowledge_window_minutes: e.target.value })}
-            />
-            <p className={styles.fieldHint}>Candidates promoted from waitlist must acknowledge within this window or get penalized.</p>
-            <button id="btn-create-job" className={styles.btnPrimary} disabled={loading}>
-              {loading ? 'Launching…' : '🚀 Create Job & Open Dashboard'}
-            </button>
-          </form>
-        )}
-
-        <div className={styles.stepDots}>
-          <div className={`${styles.stepDot} ${step === 1 ? styles.stepDotActive : ''}`} />
-          <div className={`${styles.stepDot} ${step === 2 ? styles.stepDotActive : ''}`} />
+        {/* COMPANY CARD */}
+        <div style={s.card} onClick={() => nav('/admin/login')}>
+          <div style={s.iconWrap}>
+            <svg width="28" height="28" fill="none" stroke="#00d4aa" strokeWidth="2" viewBox="0 0 24 24">
+              <rect x="2" y="7" width="20" height="14" rx="2"/>
+              <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+            </svg>
+          </div>
+          <p style={s.cardTitle}>I'm a Hiring Manager</p>
+          <p style={s.cardDesc}>Manage your pipeline, review applicants, post new jobs, and let the system handle promotions automatically.</p>
+          <span style={s.cardBtn(false)}>Admin Login →</span>
         </div>
       </div>
 
-      <div className={styles.featuresRow}>
-        <div className={styles.featureChip}><span>🔐</span>Advisory Locks</div>
-        <div className={styles.featureChip}><span>⏱</span>Auto Decay</div>
-        <div className={styles.featureChip}><span>📋</span>Full Audit Log</div>
-      </div>
+      <p style={s.adminLink}>
+        Need to find your application?
+        <span style={s.adminA} onClick={() => nav('/applicant')}>Identify yourself here</span>
+      </p>
     </div>
   );
 }

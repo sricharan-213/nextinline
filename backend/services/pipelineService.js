@@ -100,7 +100,7 @@ async function acquireAdvisoryLock(client, lockId, attempt = 0) {
 }
 
 // Submits a new application — uses advisory lock with retry
-async function applyForJob(jobId, name, email) {
+async function applyForJob(jobId, name, email, userId = null) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
