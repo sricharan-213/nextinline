@@ -1,8 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'nextinline_secret_2024';
+const { jwtSecret } = require('../config');
 
 async function adminLogin(email, password) {
   const result = await pool.query(
@@ -21,7 +20,7 @@ async function adminLogin(email, password) {
 
   const token = jwt.sign(
     { adminId: admin.id, email: admin.email, company_id: admin.company_id, role: 'admin' },
-    JWT_SECRET,
+    jwtSecret,
     { expiresIn: '24h' }
   );
 

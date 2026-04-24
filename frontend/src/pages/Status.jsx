@@ -2,29 +2,38 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CountdownTimer from '../components/CountdownTimer';
 import { publicGet, publicPost } from '../utils/api';
+import styles from './Status.module.css';
 
 const STATUS_CONFIG = {
-  active: { icon: '✅', label: 'In Active Review', color: '#4ade80', desc: "Your application is under active consideration. The hiring team will reach out directly." },
-  pending_acknowledgment: { icon: '⏳', label: "Action Required!", color: '#fbbf24', desc: "A slot opened for you. Acknowledge below before the timer runs out or you'll be re-queued with a penalty." },
-  waitlisted: { icon: '📋', label: 'On the Waitlist', color: '#94a3b8', desc: "You're queued and will be automatically promoted when a slot becomes available." },
-  hired: { icon: '🎉', label: "You're Hired!", color: '#34d399', desc: "Congratulations! The team has selected you. Expect an official offer soon." },
-  rejected: { icon: '📩', label: 'Application Closed', color: '#f87171', desc: "The team has decided not to move forward at this time. Thank you for applying." },
-  withdrawn: { icon: '↩', label: 'Withdrawn', color: '#555', desc: "This application has been withdrawn from the pipeline." }
+  active:                { icon: '✅', label: 'In Active Review',   color: '#4ade80', borderColor: '#166534' },
+  pending_acknowledgment:{ icon: '⏳', label: 'Action Required!',   color: '#fbbf24', borderColor: '#78350f' },
+  waitlisted:            { icon: '📋', label: 'On the Waitlist',    color: '#94a3b8', borderColor: '#374151' },
+  hired:                 { icon: '🎉', label: "You're Hired!",      color: '#34d399', borderColor: '#065f46' },
+  rejected:              { icon: '📩', label: 'Application Closed', color: '#f87171', borderColor: '#7f1d1d' },
+  withdrawn:             { icon: '↩',  label: 'Withdrawn',          color: '#555',    borderColor: '#374151' }
+};
+
+const STATUS_DESCRIPTIONS = {
+  active:                'Your application is under active consideration. The hiring team will reach out directly.',
+  pending_acknowledgment:'A slot opened for you. Acknowledge below before the timer runs out or you\'ll be re-queued with a penalty.',
+  waitlisted:            "You're queued and will be automatically promoted when a slot becomes available.",
+  hired:                 'Congratulations! The team has selected you. Expect an official offer soon.',
+  rejected:              'The team has decided not to move forward at this time. Thank you for applying.',
+  withdrawn:             'This application has been withdrawn from the pipeline.'
 };
 
 export default function Status() {
   const { applicantId } = useParams();
   const nav = useNavigate();
-  const [data, setData] = useState(null);
+  const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState('');
+  const [err, setErr]       = useState('');
 
   async function fetchStatus() {
     try {
       const r = await publicGet(`/applicants/${applicantId}/status`);
       if (!r.ok) throw new Error('Not found');
-      const d = await r.json();
-      setData(d);
+      setData(await r.json());
     } catch (e) { setErr(e.message); }
     setLoading(false);
   }
@@ -50,52 +59,38 @@ export default function Status() {
     } catch (e) { alert(e.message); }
   }
 
-  const s = {
-    wrap: { minHeight: '100vh', background: '#0a0d14', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 },
-    card: { background: '#111827', border: '1px solid #1e2235', borderRadius: 20, padding: 40, width: '100%', maxWidth: 500 },
-    logo: { color: '#00d4aa', fontWeight: 800, fontSize: 20, cursor: 'pointer', marginBottom: 32, display: 'block', textAlign: 'center' },
-    name: { color: '#fff', fontSize: 22, fontWeight: 800, marginBottom: 4 },
-    email: { color: '#555', fontSize: 14, marginBottom: 24 },
-    box: (c) => ({ background: '#0d1117', border: `1px solid ${c}44`, borderRadius: 16, padding: 24, marginBottom: 24 }),
-    icon: { fontSize: 32, marginBottom: 12, display: 'block' },
-    label: (c) => ({ color: c, fontWeight: 800, fontSize: 18, marginBottom: 8, display: 'block' }),
-    desc: { color: '#888', fontSize: 14, lineHeight: 1.6 },
-    pos: { display: 'inline-block', marginTop: 16, background: '#1e2235', color: '#fff', padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700 },
-    ack: { background: '#fbbf24', color: '#000', border: 'none', borderRadius: 10, padding: 14, fontWeight: 800, width: '100%', cursor: 'pointer', marginTop: 20 },
-    withdraw: { background: 'transparent', border: '1px solid #333', color: '#555', padding: '8px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer', marginTop: 24, width: '100%' }
-  };
-
-  if (loading) return <div style={{ padding: 100, textAlign: 'center', color: '#555' }}>Loading status...</div>;
-  if (!data) return <div style={{ padding: 100, textAlign: 'center', color: '#f87171' }}>{err || 'Application not found'}</div>;
+  if (loading) return <div className={styles.wrap}><div className={styles.card} style={{ textAlign: 'center', color: '#555' }}>Loading status...</div></div>;
+  if (!data)   return <div className={styles.wrap}><div className={styles.card} style={{ textAlign: 'center', color: '#f87171' }}>{err || 'Application not found'}</div></div>;
 
   const cfg = STATUS_CONFIG[data.status] || STATUS_CONFIG.waitlisted;
+  const desc = STATUS_DESCRIPTIONS[data.status] || '';
 
   return (
-    <div style={s.wrap}>
-      <div style={s.card}>
-        <span style={s.logo} onClick={() => nav('/')}>■ NextInLine</span>
-        <h2 style={s.name}>Hi, {data.name}</h2>
-        <p style={s.email}>{data.job_title} · {data.email}</p>
+    <div className={styles.wrap}>
+      <div className={styles.card}>
+        <span className={styles.logo} onClick={() => nav('/')}>■ NextInLine</span>
+        <h2 className={styles.name}>Hi, {data.name}</h2>
+        <p className={styles.email}>{data.job_title} · {data.email}</p>
 
-        <div style={s.box(cfg.color)}>
-          <span style={s.icon}>{cfg.icon}</span>
-          <span style={s.label(cfg.color)}>{cfg.label}</span>
-          <p style={s.desc}>{cfg.desc}</p>
+        <div className={styles.statusBox} style={{ borderColor: `${cfg.borderColor}44` }}>
+          <span className={styles.statusIcon}>{cfg.icon}</span>
+          <span className={styles.statusLabel} style={{ color: cfg.color }}>{cfg.label}</span>
+          <p className={styles.statusDesc}>{desc}</p>
           {data.status === 'waitlisted' && (
-            <span style={s.pos}>Waitlist Position: #{data.waitlist_position}</span>
+            <span className={styles.positionBadge}>Waitlist Position: #{data.waitlist_position}</span>
           )}
         </div>
 
         {data.status === 'pending_acknowledgment' && (
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ color: '#fbbf24', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>TIME REMAINING TO ACKNOWLEDGE:</p>
+          <div className={styles.ackBox}>
+            <p className={styles.ackLabel}>TIME REMAINING TO ACKNOWLEDGE:</p>
             <CountdownTimer deadline={data.acknowledge_deadline} />
-            <button style={s.ack} onClick={acknowledge}>Acknowledge Promotion ✓</button>
+            <button className={styles.ackBtn} onClick={acknowledge}>Acknowledge Promotion ✓</button>
           </div>
         )}
 
         {['active', 'waitlisted', 'pending_acknowledgment'].includes(data.status) && (
-          <button style={s.withdraw} onClick={withdraw}>Withdraw Application</button>
+          <button className={styles.withdrawBtn} onClick={withdraw}>Withdraw Application</button>
         )}
       </div>
     </div>

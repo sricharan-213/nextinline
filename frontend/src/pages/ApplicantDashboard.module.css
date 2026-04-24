@@ -1,0 +1,222 @@
+.wrap {
+  min-height: 100vh;
+  background: #0a0d14;
+}
+
+.nav {
+  border-bottom: 1px solid #1e2235;
+  padding: 0 32px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0f1117;
+}
+
+.logo {
+  color: #00d4aa;
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.greeting {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.logoutBtn {
+  background: transparent;
+  border: 1px solid #333;
+  color: #888;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 16px;
+}
+
+.welcomeTitle {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.welcomeEmail {
+  color: #555;
+  font-size: 15px;
+  margin-bottom: 40px;
+}
+
+.tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #1e2235;
+  margin-bottom: 32px;
+}
+
+.tab {
+  padding: 12px 4px;
+  color: #555;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.tabActive {
+  color: #00d4aa;
+  border-bottom-color: #00d4aa;
+}
+
+.card {
+  background: #111827;
+  border: 1px solid #1e2235;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.jobTitle {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.jobMeta {
+  color: #555;
+  font-size: 14px;
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+
+.ackBox {
+  background: #2d240d;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.ackLabel {
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.ackBtn {
+  background: #fbbf24;
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 12px;
+  width: 100%;
+  font-size: 14px;
+}
+
+.actionRow {
+  display: flex;
+  gap: 10px;
+}
+
+.btnSecondary {
+  background: transparent;
+  border: 1px solid #333;
+  color: #888;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.jobDesc {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.jobStats {
+  display: flex;
+  gap: 12px;
+}
+
+.jobStat {
+  color: #555;
+  font-size: 12px;
+}
+
+.applyBtn {
+  background: #00d4aa;
+  color: #0a0d14;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.appliedBadge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #1f2937;
+  color: #94a3b8;
+  border: 1px solid #374151;
+}
+
+.empty {
+  text-align: center;
+  padding: 60px 0;
+  color: #444;
+}
+
+.emptyBtn {
+  background: #00d4aa;
+  color: #0a0d14;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 22px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.loading {
+  padding: 100px;
+  text-align: center;
+  color: #555;
+}

@@ -131,10 +131,16 @@ describe('applyForJob', () => {
     const result = await applyForJob('job-1', 'Alice', 'alice@test.com');
     expect(result).toHaveProperty('id', 'a1');
     expect(result.status).toBe('active');
+    expect(result.waitlist_position).toBeNull();
     expect(client.query).toHaveBeenCalledTimes(9);
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/pg_try_advisory_xact_lock/i), expect.any(Array));
     expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/INSERT INTO applicants/i), expect.any(Array));
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/INSERT INTO audit_log/i), expect.any(Array));
+    expect(client.query).toHaveBeenCalledWith('BEGIN');
     expect(client.query).toHaveBeenCalledWith('COMMIT');
+    expect(client.query).not.toHaveBeenCalledWith('ROLLBACK');
     expect(client.release).toHaveBeenCalled();
+    expect(pool.connect).toHaveBeenCalledTimes(1);
   });
 
   test('throws NotFoundError when job does not exist', async () => {
@@ -147,9 +153,10 @@ describe('applyForJob', () => {
     pool.connect = jest.fn().mockResolvedValue(client);
 
     await expect(applyForJob('bad-job', 'Bob', 'b@b.com')).rejects.toThrow(NotFoundError);
-    expect(client.query).toHaveBeenCalledTimes(6); // BEGIN, hash, advisory, count, job (FAIL), ROLLBACK
+    await expect(applyForJob('bad-job', 'Bob', 'b@b.com')).rejects.toMatchObject({ status: 404 });
     expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/SELECT[\s\S]*FROM jobs/i), expect.arrayContaining(['bad-job']));
     expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    expect(client.query).not.toHaveBeenCalledWith('COMMIT');
     expect(client.release).toHaveBeenCalled();
   });
 
@@ -164,19 +171,14 @@ describe('applyForJob', () => {
     pool.connect = jest.fn().mockResolvedValue(client);
 
     await expect(applyForJob('job-1', 'Alice', 'alice@test.com')).rejects.toThrow(ConflictError);
-    expect(client.query).toHaveBeenCalledTimes(7); // BEGIN, hash, advisory, count, job, dupe (FAIL), ROLLBACK
+    await expect(applyForJob('job-1', 'Alice', 'alice@test.com')).rejects.toMatchObject({ status: 409 });
     expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/SELECT[\s\S]*FROM applicants[\s\S]*email/i), expect.arrayContaining(['job-1', 'alice@test.com']));
     expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    expect(client.query).not.toHaveBeenCalledWith('COMMIT');
+    expect(client.query).not.toHaveBeenCalledWith(expect.stringMatching(/INSERT INTO applicants/i), expect.any(Array));
   });
 
   test('places applicant on waitlist when at capacity', async () => {
-    /**
-     * Extra queries when waitlisted:
-     * 5. dup check → { rows: [] }
-     * 6. max waitlist pos → { rows: [{ next_pos: 1 }] }
-     * 7. INSERT → { rows: [{ id: 'wl', status: 'waitlisted', waitlist_position: 1 }] }
-     * 8. logEvent → { rows: [] }
-     */
     const client = makeMockClient([
       { rows: [{ lock_id: 1 }] },
       { rows: [{ pg_try_advisory_xact_lock: true }] },
@@ -192,9 +194,13 @@ describe('applyForJob', () => {
     const result = await applyForJob('job-1', 'Carol', 'carol@test.com');
     expect(result).toHaveProperty('status', 'waitlisted');
     expect(result.waitlist_position).toBe(1);
+    expect(result).toHaveProperty('id', 'wl');
     expect(client.query).toHaveBeenCalledTimes(10);
     expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/MAX\(waitlist_position\)/i), ['job-1']);
+    expect(client.query).toHaveBeenCalledWith(expect.stringMatching(/INSERT INTO audit_log/i), expect.any(Array));
     expect(client.query).toHaveBeenCalledWith('COMMIT');
+    expect(client.query).not.toHaveBeenCalledWith('ROLLBACK');
+    expect(client.release).toHaveBeenCalled();
   });
 });
 

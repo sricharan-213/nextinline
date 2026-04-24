@@ -2,8 +2,9 @@
 DROP TABLE IF EXISTS audit_log CASCADE;
 DROP TABLE IF EXISTS applicants CASCADE;
 DROP TABLE IF EXISTS jobs CASCADE;
-DROP TABLE IF EXISTS companies CASCADE;
 DROP TABLE IF EXISTS admin_users CASCADE;
+DROP TABLE IF EXISTS companies CASCADE;
+DROP TABLE IF EXISTS applicant_profiles CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS refresh_tokens CASCADE;
 
@@ -65,6 +66,14 @@ CREATE TABLE audit_log (
   old_position INTEGER,
   new_position INTEGER,
   metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Applicant identity profiles — one row per unique email, across all jobs
+CREATE TABLE applicant_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
