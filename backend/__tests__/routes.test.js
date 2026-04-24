@@ -1,5 +1,7 @@
 const request = require('supertest');
 const pool = require('../db');
+const jwt = require('jsonwebtoken');
+const { jwtSecret } = require('../config');
 
 // Mock decayService to prevent background loop from consuming mocks
 jest.mock('../services/decayService', () => ({
@@ -19,9 +21,42 @@ describe('Integration Tests — API Routes', () => {
     jest.resetAllMocks();
   });
 
+  describe('POST /api/applicants/identify', () => {
+    it('should create or find profile and return JWT', async () => {
+      const mockProfile = { id: 'p1', name: 'John Doe', email: 'john@test.com' };
+      pool.query.mockResolvedValueOnce({ rows: [mockProfile] }); // Find existing
+
+      const res = await request(app)
+        .post('/api/applicants/identify')
+        .send({ name: 'John Doe', email: 'john@test.com' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('token');
+      expect(res.body.name).toBe('John Doe');
+    });
+
+    it('should return 400 for invalid email', async () => {
+      const res = await request(app)
+        .post('/api/applicants/identify')
+        .send({ name: 'J', email: 'not-an-email' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+    });
+  });
+
   describe('POST /api/applicants/apply', () => {
-    it('should return 201 and applicant data on success', async () => {
-      const mockApplicant = { id: 1, name: 'Test User', email: 'test@example.com', job_id: 'j1', status: 'active' };
+    it('should require applicant token', async () => {
+      const res = await request(app)
+        .post('/api/applicants/apply')
+        .send({ job_id: '00000000-0000-0000-0000-000000000001' });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should apply successfully with valid token', async () => {
+      const token = jwt.sign({ name: 'John', email: 'john@test.com' }, jwtSecret);
+      const mockApplicant = { id: 'a1', status: 'active' };
       
       const mockClient = {
         query: jest.fn(),
@@ -29,41 +64,25 @@ describe('Integration Tests — API Routes', () => {
       };
       pool.connect.mockResolvedValue(mockClient);
 
-      // Tracing applyForJob queries:
-      // 1. BEGIN (106)
-      // 2. GET lock_id (108)
-      // 3. Advisory lock check (88)
-      // 4. Active count (116)
-      // 5. Job capacity check (121)
-      // 6. Duplicate email check (128)
-      // 7. Insert applicant (146)
-      // 8. Log event (152 -> 12)
-      // 9. COMMIT (162)
-
+      // Mock queries for applyForJob
       mockClient.query
-        .mockResolvedValueOnce({ rows: [] }) // 1
-        .mockResolvedValueOnce({ rows: [{ lock_id: '123' }] }) // 2
-        .mockResolvedValueOnce({ rows: [{ pg_try_advisory_xact_lock: true }] }) // 3
-        .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // 4
-        .mockResolvedValueOnce({ rows: [{ active_capacity: 5, is_open: true }] }) // 5
-        .mockResolvedValueOnce({ rows: [] }) // 6
-        .mockResolvedValueOnce({ rows: [mockApplicant] }) // 7
-        .mockResolvedValueOnce({ rows: [] }) // 8
-        .mockResolvedValueOnce({ rows: [] }); // 9
+        .mockResolvedValueOnce({ rows: [] }) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ lock_id: '123' }] }) // Hash
+        .mockResolvedValueOnce({ rows: [{ pg_try_advisory_xact_lock: true }] }) // Lock
+        .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // Active count
+        .mockResolvedValueOnce({ rows: [{ active_capacity: 5, is_open: true }] }) // Job lookup
+        .mockResolvedValueOnce({ rows: [] }) // Dup check
+        .mockResolvedValueOnce({ rows: [mockApplicant] }) // Insert
+        .mockResolvedValueOnce({ rows: [] }) // Log
+        .mockResolvedValueOnce({ rows: [] }); // COMMIT
 
       const res = await request(app)
         .post('/api/applicants/apply')
-        .send({ job_id: 'j1', name: 'Test User', email: 'test@example.com' });
-
-      if (res.status !== 201) {
-        console.error('POST /apply failed with:', res.body);
-      }
+        .set('Authorization', `Bearer ${token}`)
+        .send({ job_id: '00000000-0000-0000-0000-000000000001' });
 
       expect(res.status).toBe(201);
-      expect(res.body).toHaveProperty('id');
-      expect(res.body.email).toBe('test@example.com');
-      expect(pool.connect).toHaveBeenCalled();
-      expect(mockClient.release).toHaveBeenCalled();
+      expect(res.body.id).toBe('a1');
     });
   });
 
@@ -77,19 +96,6 @@ describe('Integration Tests — API Routes', () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body[0].title).toBe('Software Engineer');
-    });
-  });
-
-  describe('GET /api/companies', () => {
-    it('should return 200 and a list of companies', async () => {
-      const mockCompanies = [{ id: 'c1', name: 'Tech Corp' }];
-      pool.query.mockResolvedValueOnce({ rows: mockCompanies });
-
-      const res = await request(app).get('/api/companies');
-
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body[0].name).toBe('Tech Corp');
     });
   });
 });

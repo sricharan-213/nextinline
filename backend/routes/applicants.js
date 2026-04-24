@@ -1,21 +1,33 @@
 const router = require('express').Router();
 const pool = require('../db');
 const jwt = require('jsonwebtoken');
+const { z } = require('zod');
 const { requireAdmin, requireApplicant } = require('../middleware/auth');
 const { applyForJob, exitApplicant, acknowledgePromotion } = require('../services/pipelineService');
+const { jwtSecret } = require('../config');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'nextinline_secret_2024';
+// Schemas
+const identifySchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  email: z.string().email("Invalid email format")
+});
 
-// POST /api/applicants/identify — PUBLIC — find or create lightweight profile
+const applySchema = z.object({
+  job_id: z.string().uuid("Invalid job ID format")
+});
+
+const exitSchema = z.object({
+  reason: z.enum(['rejected', 'hired', 'withdrawn'])
+});
+
+// POST /api/applicants/identify
 router.post('/identify', async (req, res, next) => {
   try {
-    const { name, email } = req.body;
-    if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
+    const { name, email } = identifySchema.parse(req.body);
 
     const trimmedEmail = email.toLowerCase().trim();
     const trimmedName = name.trim();
 
-    // Find or create profile
     let profile = await pool.query('SELECT * FROM applicant_profiles WHERE email = $1', [trimmedEmail]);
     
     if (profile.rows.length === 0) {
@@ -28,15 +40,20 @@ router.post('/identify', async (req, res, next) => {
 
     const token = jwt.sign(
       { email: profile.rows[0].email, name: profile.rows[0].name },
-      JWT_SECRET,
+      jwtSecret,
       { expiresIn: '24d' }
     );
 
     res.json({ token, name: profile.rows[0].name, email: profile.rows[0].email });
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.errors[0].message });
+    }
+    next(err);
+  }
 });
 
-// GET /api/applicants/my-applications — APPLICANT ONLY
+// GET /api/applicants/my-applications
 router.get('/my-applications', requireApplicant, async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -53,20 +70,23 @@ router.get('/my-applications', requireApplicant, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/applicants/apply — APPLICANT ONLY
+// POST /api/applicants/apply
 router.post('/apply', requireApplicant, async (req, res, next) => {
   try {
-    const { job_id } = req.body;
+    const { job_id } = applySchema.parse(req.body);
     const { name, email } = req.applicant;
     
-    if (!job_id) return res.status(400).json({ error: 'job_id required' });
-
     const applicant = await applyForJob(job_id, name, email);
     res.status(201).json(applicant);
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.errors[0].message });
+    }
+    next(err);
+  }
 });
 
-// GET /api/applicants/:id/status — PUBLIC
+// GET /api/applicants/:id/status
 router.get('/:id/status', async (req, res, next) => {
   try {
     const result = await pool.query(
@@ -83,7 +103,7 @@ router.get('/:id/status', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/applicants/:id/acknowledge — PUBLIC
+// POST /api/applicants/:id/acknowledge
 router.post('/:id/acknowledge', async (req, res, next) => {
   try {
     const result = await acknowledgePromotion(req.params.id);
@@ -91,7 +111,7 @@ router.post('/:id/acknowledge', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/applicants/:id/withdraw — APPLICANT ONLY (verified via JWT)
+// POST /api/applicants/:id/withdraw
 router.post('/:id/withdraw', requireApplicant, async (req, res, next) => {
   try {
     const check = await pool.query(
@@ -113,16 +133,18 @@ router.post('/:id/withdraw', requireApplicant, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /api/applicants/:id/exit — ADMIN ONLY
+// POST /api/applicants/:id/exit (ADMIN)
 router.post('/:id/exit', requireAdmin, async (req, res, next) => {
   try {
-    const { reason } = req.body;
-    if (!['rejected', 'hired', 'withdrawn'].includes(reason)) {
-      return res.status(400).json({ error: 'reason must be rejected, hired, or withdrawn' });
-    }
+    const { reason } = exitSchema.parse(req.body);
     const result = await exitApplicant(req.params.id, reason);
     res.json(result);
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.errors[0].message });
+    }
+    next(err);
+  }
 });
 
 module.exports = router;

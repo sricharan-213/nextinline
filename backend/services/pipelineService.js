@@ -1,11 +1,10 @@
 const pool = require('../db');
 const { NotFoundError, ConflictError, GoneError, AppError } = require('../utils/AppError');
-
-const MAX_LOCK_RETRIES = 5;
+const { maxLockRetries, initialLockDelay } = require('../config');
 
 /**
  * Writes a state transition to audit_log.
- * `client` is optional — if omitted, the pool is used directly (for non-transactional audit writes).
+ * Uses object destructuring for better readability and extensibility.
  */
 async function logEvent({ client, applicantId, jobId, event, oldStatus, newStatus, oldPosition, newPosition, metadata }) {
   const executor = client || pool;
@@ -81,26 +80,25 @@ async function getApplicantLog(applicantId) {
 
 /**
  * Attempts to acquire a pg advisory lock with exponential backoff.
- * Retries up to MAX_LOCK_RETRIES times before throwing 503.
- * Each retry uses a fresh transaction-level connection attempt.
+ * Uses parameters from centralized config.
  */
 async function acquireAdvisoryLock(client, lockId, attempt = 0) {
   const acquired = await client.query(`SELECT pg_try_advisory_xact_lock($1)`, [lockId]);
   if (acquired.rows[0].pg_try_advisory_xact_lock) return true;
 
-  if (attempt >= MAX_LOCK_RETRIES - 1) {
+  if (attempt >= maxLockRetries - 1) {
     throw new AppError('Pipeline slot is busy — retry shortly', 503);
   }
 
-  // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms (capped at 2s)
-  const delay = Math.min(100 * Math.pow(2, attempt), 2000);
+  // Exponential backoff using initialLockDelay from config
+  const delay = Math.min(initialLockDelay * Math.pow(2, attempt), 2000);
   await new Promise(r => setTimeout(r, delay));
 
   return acquireAdvisoryLock(client, lockId, attempt + 1);
 }
 
 // Submits a new application — uses advisory lock with retry
-async function applyForJob(jobId, name, email, userId = null) {
+async function applyForJob(jobId, name, email) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -110,7 +108,7 @@ async function applyForJob(jobId, name, email, userId = null) {
     );
     const lockId = lockResult.rows[0].lock_id;
 
-    // Acquire with retry + exponential backoff (max 5 attempts)
+    // Acquire with retry + exponential backoff
     await acquireAdvisoryLock(client, lockId);
 
     const countResult = await client.query(
@@ -186,7 +184,15 @@ async function exitApplicant(applicantId, reason) {
       `UPDATE applicants SET status = $1, updated_at = NOW() WHERE id = $2`, [reason, applicantId]
     );
 
-    await logEvent({ client, applicantId, jobId: applicant.job_id, event: reason, oldStatus: 'active', newStatus: reason });
+    await logEvent({ 
+      client, 
+      applicantId, 
+      jobId: applicant.job_id, 
+      event: reason, 
+      oldStatus: 'active', 
+      newStatus: reason 
+    });
+    
     await promoteNext(client, applicant.job_id);
 
     await client.query('COMMIT');

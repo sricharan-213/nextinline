@@ -64,8 +64,8 @@ describe('checkDecay', () => {
     expect(updateCall[1][1]).toBe('a1');
 
     expect(logEvent).toHaveBeenCalledWith(
-      client,
       expect.objectContaining({
+        client,
         applicantId: 'a1',
         jobId: 'j1',
         event: 'decayed',

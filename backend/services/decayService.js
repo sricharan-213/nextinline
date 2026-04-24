@@ -44,7 +44,8 @@ async function checkDecay() {
           [penalizedPosition, applicant.id]
         );
 
-        await logEvent(client, {
+        await logEvent({
+          client,
           applicantId: applicant.id,
           jobId: applicant.job_id,
           event: 'decayed',

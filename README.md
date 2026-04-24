@@ -30,6 +30,7 @@ It features an automated waitlist system with a **Decay Algorithm** that ensures
 - **Frontend**: React, Vite, Vanilla CSS (Custom Dark Theme)
 - **Backend**: Node.js, Express
 - **Database**: PostgreSQL
+- **Validation**: Zod (Schema-based input validation)
 - **Security**: JWT (Role-based), Bcryptjs, pg-advisory-locks (for pipeline concurrency)
 
 ---
@@ -115,3 +116,4 @@ nextinline/
 - **Polling over WebSockets**: The dashboard uses a 10s polling interval for simple, reliable state synchronization without the overhead of persistent socket connections.
 - **Advisory Locks**: Uses PostgreSQL advisory locks during the promotion/apply logic to prevent race conditions when multiple applicants apply or are promoted simultaneously.
 - **Stateless Applicants**: By using JWT tokens tied to email, we avoid the need for complex session management for candidates while keeping their dashboard secure.
+- **Robust Input Validation**: Uses **Zod** schemas at the API boundary to ensure all incoming data (IDs, emails, job parameters) is strictly typed and validated before reaching the service layer.
